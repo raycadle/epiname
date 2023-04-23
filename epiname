@@ -18,7 +18,6 @@ EOF
 
 say_err() { echo "Error: ${1}" >&2 && exit 1; }
 
-
 run_scraper() {
 if python3 ./scraper.py "${show_name}" "${title_file}" 2> /dev/null; then
   sed -i '/^List of.*episodes$/d;/^Release$/d;s/^"//g;s/".*$//g;s/:/-/g;s/\?/_/g' "${title_file}"
@@ -47,21 +46,30 @@ for file in "${dest_dir}"/*; do
             for sub_sub_file in "${sub_sub_dir}"/*; do
               if [[ -f "${sub_sub_file}" ]]; then 
                 case "${sub_sub_file##*.}" in
-                  mkv|mp4|avi) files+=("${sub_sub_file%.*}"); ext+=("${sub_sub_file##*.}") ;;
+                  mkv|mp4|avi)
+                    files+=("${sub_sub_file%.*}")
+                    ext+=("${sub_sub_file##*.}")
+                    ;;
                 esac
               fi
             done
           fi
         elif [[ -f "${sub_file}" ]]; then
           case "${sub_file##*.}" in
-            mkv|mp4|avi) files+=("${sub_file%.*}"); ext+=("${sub_file##*.}") ;;
+            mkv|mp4|avi)
+              files+=("${sub_file%.*}")
+              ext+=("${sub_file##*.}")
+              ;;
           esac
         fi
       done
     fi
   elif [[ -f "${file}" ]]; then
     case "${file##*.}" in
-      mkv|mp4|avi) files+=("${file%.*}"); ext+=("${file##*.}") ;;
+      mkv|mp4|avi)
+        files+=("${file%.*}")
+        ext+=("${file##*.}")
+        ;;
     esac
   fi
 done
@@ -131,6 +139,7 @@ fi
 if [[ "${run_scraper}" == "Y" ]]; then
   run_scraper
 fi
+
 if [[ "${edit_titles}" == "Y" ]]; then
   "${EDITOR:-vi}" "${title_file}"
 fi
