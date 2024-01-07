@@ -32,3 +32,4 @@ The recommended filename format is as follows:
 - (maybe) use show name to add properly formatted show name to front of episode filenames
 - proper error reporting
 - optimize wikipedia scraping, if possible
+- clean up code and help text

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+import sys
 import argparse
 import tempfile
 import subprocess
@@ -20,18 +21,34 @@ args = parser.parse_args()
 titles = []
 files = []
 
+def get_files():
+  if args.dir:
+    if Path(args.dir).is_dir():
+      workingDir = args.dir
+    else:
+      print('error:', args.dir, 'is not a directory')
+      sys.exit(2)
+  else:
+    workingDir = Path.cwd()
+  
+  path = Path(workingDir)
+  for path in sorted(path.rglob('*')):
+    file = Path(path)
+    ext = ['.mkv', '.mp4']
+    if file.is_file():
+      if file.suffix in ext:
+        files.append(file)
+
 def get_titles():
   editor = os.environ.get('EDITOR', 'vi')
   if args.file:
-    titleFile = args.file
-    
-    if args.edit == True:
-      subprocess.call([editor, titleFile])
-    
-    with open(titleFile, "r") as file:
-      for line in file:
-        titles.append(line.rstrip())
+    if Path(args.file).is_file():
+      titleFile = args.file
+    else:
+      print('error:', args.file, 'is not a file')
+      sys.exit(2)
   else:
+    titleFile = tempfile.NamedTemporaryFile().name
     showName = args.show
     searchQuery = "List of " + showName + " episodes"
     searchResult = wikipedia.search(searchQuery, results=1)
@@ -41,31 +58,19 @@ def get_titles():
       response = requests.get(url=showPage.url)
       soup = BeautifulSoup(response.content, 'html.parser')
       items = soup.find(id="mw-content-text").find_all(class_="summary")
-      tempFile = tempfile.NamedTemporaryFile()
       
-      with open(tempFile.name, "w") as file:
+      with open(titleFile, "w") as file:
         for item in items:
           print(item.get_text(), file=file)
       
-      subprocess.run(['sed', '-i', '/^List of.*episodes$/d;/^Release$/d;s/^"//g;s/".*$//g;s/:/-/g;s/\?/_/g', tempFile.name])
+      subprocess.run(['sed', '-i', '/^List of.*episodes$/d;/^Release$/d;s/^"//g;s/".*$//g;s/:/-/g;s/\?/_/g', titleFile])
       
-      if args.edit == True:
-        subprocess.call([editor, tempFile.name])
-      
-      with open(tempFile.name, "r") as file:
-        for line in file:
-          titles.append(line.rstrip())
-
-def get_files():
-  if args.dir:
-    workingDir = args.dir
-  else:
-    workingDir = Path.cwd()
-  path = Path(workingDir)
-  for path in path.rglob('*'):
-    file = Path(path)
-    if file.is_file():
-      files.append(file)
+  if args.edit == True:
+    subprocess.call([editor, titleFile])
+    
+  with open(titleFile, "r") as file:
+    for line in file:
+      titles.append(line.rstrip())
 
 def rename_files():
   if len(files) == len(titles):
@@ -78,7 +83,8 @@ def rename_files():
       else:
         f.rename(newName)
   else:
-    print('error: number of files and titles do not match')
+    print('error: the number of files (', len(files), ') and titles (', len(titles), ') do not match')
+    sys.exit(1)
 
 get_titles()
 get_files()
