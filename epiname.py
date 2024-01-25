@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 # To Do
+# major rewrite: fork bulky.py and add function to title files (from existing file or search show), with syntax specification from user, position (basically the current insert function of bulky.py adapted to titling show episodes)
 # feat: group seasons, if appli.
 # feat: specify naming format
 # feat: interactive when no args
