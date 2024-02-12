@@ -37,7 +37,7 @@ done < "${title_file}"
 build_other_arrays() {
 for file in "${dest_dir}"/*; do
   if [[ -d "${file}" ]]; then
-    if [[ "$(basename "${file}")" =~ ^Season\ [0-9]?[0-9]?[0-9]$ ]]; then
+    if [[ "$(basename "${file}")" =~ ^Season\ [0-9]?[0-9]?[0-9].*$ ]]; then
       declare sub_dir="${file%%/}"
       for sub_file in "${sub_dir}"/*; do
         if [[ -d "${sub_file}" ]]; then
@@ -77,6 +77,8 @@ done
 
 # Rename files
 rename_files() {
+build_titles_array
+build_other_arrays
 if [[ "${#files[@]}" -eq "${#titles[@]}" ]]; then
   for i in "${!files[@]}"; do
     mv "${files[i]}.${ext[i]}" "${files[i]} - ${titles[i]}.${ext[i]}"
@@ -90,6 +92,10 @@ else
 fi
 }
 
+get_titles_only() {
+run_scraper
+}
+
 main() {
 [[ "$#" -lt 1 ]] && say_err "atleast one argument expected."
 
@@ -97,8 +103,12 @@ declare dest_dir=""
 declare title_file=""
 declare run_scraper="Y"
 declare edit_titles="N"
+declare get_titles_only="N"
+declare -a files=()
+declare -a ext=()
+declare -a titles=()
 
-while getopts ":hed:f:" arg; do
+while getopts ":hed:f:g" arg; do
   case $arg in
     h) show_help; exit 0 ;;
     e) edit_titles="Y" ;;
@@ -117,6 +127,7 @@ while getopts ":hed:f:" arg; do
         say_err "${OPTARG} is not a file."
       fi
       ;;
+    g) get_titles_only="Y" ;;
     :) say_err "-${OPTARG} requires an argument." ;;
     ?) say_err "-${OPTARG} is an invalid option." ;;
   esac
@@ -144,14 +155,9 @@ if [[ "${edit_titles}" == "Y" ]]; then
   "${EDITOR:-vi}" "${title_file}"
 fi
 
-declare -a titles=()
-build_titles_array
-
-declare -a files=()
-declare -a ext=()
-build_other_arrays
-
+if [[ "${get_titles_only}" == "N" ]]; then
 rename_files
+fi
 }
 
 main "$@"
