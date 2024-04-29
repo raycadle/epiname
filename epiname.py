@@ -19,17 +19,18 @@ import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
 
-def pars_args():
-  # Parse Arguments
-  parser = argparse.ArgumentParser(description='Add episode titles to the episode files of a show.')
-  parser.add_argument('-e', '--edit', action='store_true', help='edit episode titles before renaming episode files')
-  parser.add_argument('-n', '--nochange', action='store_true', help='perform mock-run and print')
-  parser.add_argument('-d', '--dir', help='directory containing the media files')
-  parser.add_argument('-f', '--file', help='file containing titles')
-  parser.add_argument('-s', '--show', help='name of the show to search for')
-  args = parser.parse_args()
+#def parse_args():
+# Parse Arguments
+parser = argparse.ArgumentParser(description='Add episode titles to the episode files of a show.')
+parser.add_argument('-e', '--edit', action='store_true', help='edit episode titles before renaming episode files')
+parser.add_argument('-n', '--nochange', action='store_true', help='perform mock-run and print')
+parser.add_argument('-d', '--dir', help='directory containing the media files')
+parser.add_argument('-f', '--file', help='file containing titles')
+parser.add_argument('-s', '--show', help='name of the show to search for')
+args = parser.parse_args()
 
 def get_files():
+  files = []
   # Get a list of files to rename
   if args.dir:
     if Path(args.dir).is_dir():
@@ -50,7 +51,8 @@ def get_files():
         files.append(file)
   print('found', len(files), 'files in', workingDir)
 
-def get_titles():
+#def get_titles():
+  titles = []
   # Get a list of episode titles
   showName = args.show
   if args.file:
@@ -75,7 +77,7 @@ def get_titles():
         for item in items:
           print(item.get_text(), file=file)
       
-      subprocess.run(['sed', '-i', '/^List of.*episodes$/d;/^Release$/d;s/^"//g;s/".*$//g;s/:/-/g;s/\?/_/g', titleFile])
+      subprocess.run(['sed', '-i', '/^List of.*episodes$/d;/^Release$/d;s/^"//g;s/".*$//g;s/:/-/g;s/?/_/g', titleFile])
       
     else:
       print('error: no results were found for ', showName)
@@ -91,7 +93,7 @@ def get_titles():
       
   print('found', len(titles), 'titles for', showName)
 
-def rename_files():
+#def rename_files():
   # Append episode titles to the files
   if len(files) == len(titles):
     for file, title in zip(files, titles):
@@ -108,21 +110,21 @@ def rename_files():
     sys.exit(10)
 
 def main():
-  files = []
-  titles = []
+
+#  parse_args()
 
   if not len(sys.argv) > 1:
     # prompt for dir
     get_files()
     # prompt for title file
-    get_titles()
+    #get_titles()
     # prompt for show name
-    get_show()
+    #get_show()
   else:
-    pars_args()
+ #   parse_args()
     get_files()
-    get_titles()
+    #get_titles()
     
-  rename_files()
+  #rename_files()
 
 main()
