@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 # To Do
-# feat: interactive when no args - done
 # feat: prompt for confirm before rename, skip with -y, --noprompt  
 # impr: store titles in cache when failure
 
@@ -21,7 +20,6 @@ def check_file(file):
         validFile = True
     else:
         validFile = False
-
     return validFile
 
 def check_dir(directory):
@@ -29,30 +27,7 @@ def check_dir(directory):
         validDir = True
     else:
         validDir = False
-
     return validDir
-
-def search_show(showName):
-    print(f"Searching for {showName}...")
-    searchQuery = "List of " + showName + " episodes"
-    searchResult = wikipedia.search(searchQuery, results=1)
-    titlesFile = tempfile.NamedTemporaryFile().name
-
-    if searchResult:
-        showPage = wikipedia.page(searchResult[0], pageid = None, auto_suggest = False)
-        response = requests.get(url=showPage.url)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        items = soup.find(id="mw-content-text").find_all(class_="summary")
-        
-        with open(titlesFile, "w") as file:
-            for item in items:
-                print(item.get_text(), file=file)
-        
-        subprocess.run(['sed', '-i', '/^List of.*episodes$/d;/^Release$/d;s/^"//g;s/".*$//g;s/:/-/g;s/?/_/g', titlesFile])
-    else:
-        print(f"Error: no results were found for {showName}.")
-
-    return titlesFile
 
 def rename_files(filenames, episodeTitles, dryrun):
     # Append episode titles to the files
@@ -111,7 +86,29 @@ def prompt_dir():
                 break
             else:
                 print(f"Error: ${answer} is not a valid directory.")
+
     return workingDir
+
+def search_show(showName):
+    print(f"Searching for {showName}...")
+    searchQuery = "List of " + showName + " episodes"
+    searchResult = wikipedia.search(searchQuery, results=1)
+    if searchResult:
+        print(f"Found title information for {showName}.")
+        showPage = wikipedia.page(searchResult[0], pageid = None, auto_suggest = False)
+        response = requests.get(url=showPage.url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        items = soup.find(id="mw-content-text").find_all(class_="summary")
+        tempFile = tempfile.NamedTemporaryFile().name
+        with open(tempFile, "w") as file:
+            for item in items:
+                print(item.get_text(), file=file)
+        
+        subprocess.run(['sed', '-i', '/^List of.*episodes$/d;/^Release$/d;s/^"//g;s/".*$//g;s/:/-/g;s/?/_/g', tempFile])
+    else:
+        print(f"Error: no results were found for {showName}.")
+
+    return tempFile if 'tempFile' in locals() else None
 
 def prompt_titles():
     while True:
@@ -134,9 +131,9 @@ def prompt_titles():
                 break
             else:
                 print(f"Error: {answer} is not a valid file!")
-                print(f"Searching for show using {answer} as keywords...")
                 titlesSource = search_show(answer)
-                break
+                if titleSource != None:
+                    break
 
     return titlesSource
 
