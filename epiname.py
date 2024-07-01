@@ -52,42 +52,31 @@ def rename_files(fileNames: list[str], episodeTitles: list[str]) -> None:
 
     return None
 
-def prep_rename(fileNames: list[str], episodeTitles: list[str], yesCommit: bool, dryRun: bool) -> None:
+def prep_rename(fileNames: list[str], episodeTitles: list[str], assumeYes: bool, dryRun: bool) -> None:
     # Append episode titles to the files
     if len(fileNames) == len(episodeTitles):
         print(f"Renaming {len(fileNames)} files...")
-        if yesCommit:
-            if dryRun:
-                print_new_names(fileNames, episodeTitles)
-                print(f"Dry run complete!")
-            else:
-                rename_files(fileNames, episodeTitles)
-                print(f"All files renamed!")
+        if dryRun:
+            print_new_names(fileNames, episodeTitles)
+            print(f"Dry run complete!")
+            sys.exit(0)
+
+        if assumeYes:
+            rename_files(fileNames, episodeTitles)
+            print(f"All files renamed!")
         else:
             print_new_names(fileNames, episodeTitles)
             confirmed: str = input("Are these changes okay? (y|n): ")
             if confirmed == "n":
-                print(f"Pending changes cancelled. Exiting...")
+                print(f"Changes cancelled. Exiting...")
             else:
-                if dryRun:
-                    print(f"Dry run complete!")
-                else:
-                    rename_files(fileNames, episodeTitles)
-                    print(f"All files renamed!")
+                rename_files(fileNames, episodeTitles)
+                print(f"All files renamed!")
     else:
         print(f"Error: the number of files ({len(fileNames)}) and titles ({len(episodeTitles)}) do not match!")
         sys.exit(10)
 
     return None
-
-def get_filenames(workingDir: str) -> list[str]:
-    files: list[str] = []
-    ext: list[str] = [".mkv", ".mp4"]
-    print(f"Searching {workingDir} for media files...")
-    files = find_by_ext(workingDir, ext)
-    print(f"Found {len(files)} files in {workingDir}.")
-
-    return files
 
 def get_titles(titlesFile: str, editFirst: bool) -> list[str]:
     titles: list[str] = []
@@ -103,22 +92,14 @@ def get_titles(titlesFile: str, editFirst: bool) -> list[str]:
 
     return titles
 
-def prompt_dir() -> str:
-    while True:
-        answer = input("Please enter the directory to search for media files (leave blank to search current directory; q to quit): ")
-        if answer == "":
-            workingDir = Path.cwd()
-            break
-        elif answer == "q":
-            sys.exit(0)
-        else:
-            if check_dir(answer):
-                workingDir = answer
-                break
-            else:
-                print(f"Error: ${answer} is not a valid directory.")
+def get_filenames(workingDir: str) -> list[str]:
+    files: list[str] = []
+    ext: list[str] = [".mkv", ".mp4"]
+    print(f"Searching {workingDir} for media files...")
+    files = find_by_ext(workingDir, ext)
+    print(f"Found {len(files)} files in {workingDir}.")
 
-    return workingDir
+    return files
 
 def search_show(workingDir: str, showName: str) -> str or None:
     print(f"Searching for information on {showName}...")
@@ -141,20 +122,25 @@ def search_show(workingDir: str, showName: str) -> str or None:
 
     return titlesFile if 'titlesFile' in locals() else None
 
-def prompt_titles(workingDir) -> str:
+def find_titles_file(workingDir: str) -> str:
+    ext: list[str] = [".txt"]
+    result = find_by_ext(workingDir, ext)
+    titlesFile = str(result[0])
+    if check_file(titlesFile):
+        print(f"Found {titlesFile}! Scanning...")
+    else:
+        print(f"Warning: No text files were found in {answer}.")
+
+    return titlesFile
+
+def prompt_titles(workingDir: str) -> str:
     while True:
         answer = input("Please enter the title file's location or the show's name (leave blank to search current directory; q to quit): ")
         if answer == "":
             currentDir = Path.cwd()
-            ext = [".txt"]
             print(f"Searching {currentDir} for text files...")
-            result = find_by_ext(currentDir, ext)
-            titlesSource = str(result[0])
-            if check_file(titlesSource):
-                print(f"Found {titlesSource}! Scanning...")
-                break
-            else:
-                print(f"Warning: No text files were found in {currentDir}.")
+            titlesSource = find_titles_file(currentDir)
+            break
         elif answer == "q":
             sys.exit(0)
         else:
@@ -163,14 +149,8 @@ def prompt_titles(workingDir) -> str:
                 print(f"Scanning {answer}...")
                 break
             elif check_dir(answer):
-                ext: list[str] = [".txt"]
-                result = find_by_ext(answer, ext)
-                titlesSource = str(result[0])
-                if check_file(titlesSource):
-                    print(f"Found {titlesSource}! Scanning...")
-                    break
-                else:
-                    print(f"Warning: No text files were found in {answer}.")
+                titlesSource = find_titles_file(workingDir)
+                break
             else:
                 print(f"Warning: {answer} is not a file!")
                 titlesSource = search_show(workingDir, answer)
@@ -178,6 +158,61 @@ def prompt_titles(workingDir) -> str:
                     break
 
     return titlesSource
+
+def prompt_dir() -> str:
+    while True:
+        answer = input("Please enter the directory to search for media files (leave blank to search current directory; q to quit): ")
+        if answer == "":
+            workingDir = Path.cwd()
+            break
+        elif answer == "q":
+            sys.exit(0)
+        else:
+            if check_dir(answer):
+                workingDir = answer
+                break
+            else:
+                print(f"Error: ${answer} is not a valid directory.")
+
+    return workingDir
+
+def get_info(answerDir: str, answerTitles: str) -> str:
+    if answerDir:
+        if check_dir(answerDir):
+            workingDir = answerDir
+        else:
+            print(f"Warning: {answerDir} is not a directory!")
+            workingDir = prompt_dir()
+    else:
+        workingDir = prompt_dir()
+
+    if answerTitles:
+        if check_file(answerTitles):
+            titlesFile = answerTitles
+        elif check_dir(answerTitles):
+            result = find_titles_file(answerTitles)
+            if result != None:
+                titlesFile = result
+            else:
+                print(f"Warning: no titles file was found at {answerTitles}")
+                titlesFile = prompt_titles(workingDir)
+        else:
+            print(f"Warning: {answerTitles} is not a file!")
+            result = search_show(workingDir, answerTitles)
+            if result != None:
+                titlesFile = result
+            else:
+                print(f"Warning: no show info was found for {answerTitles}")
+                titlesFile = prompt_titles(workingDir)
+    else:
+        result = find_titles_file(workingDir)
+        if result != None:
+            titlesFile = result
+        else:
+            print(f"Warning: no titles file was found at {workingDir}")
+            titlesFile = prompt_titles(workingDir)
+
+    return workingDir, titlesFile
 
 def main() -> None:
     # Parse Arguments
@@ -191,7 +226,7 @@ def main() -> None:
 
     editFirst: bool = False
     dryRun: bool = False
-    yesCommit: bool = False
+    assumeYes: bool = False
 
     if len(sys.argv) <= 1:
         workingDir = prompt_dir()
@@ -205,29 +240,13 @@ def main() -> None:
             dryRun = True
 
         if args.yes:
-            yesCommit = True
+            assumeYes = True
 
-        if args.dir:
-            if check_dir(args.dir):
-                workingDir = args.dir
-            else:
-                print(f"Warning: {args.dir} is not a directory!")
-                workingDir = prompt_dir()
-        else:
-            workingDir = prompt_dir()
+        workingDir, titlesFile = get_info(args.dir, args.titles)
 
-        if args.titles:
-            if check_file(args.titles):
-                titlesFile = args.titles
-            else:
-                print(f"Warning: {args.titles} is not a file!")
-                titlesFile = prompt_titles(workingDir)
-        else:
-            titlesFile = prompt_titles(workingDir)
-
-    fileNames = get_filenames(workingDir)
     episodeTitles = get_titles(titlesFile, editFirst)
-    prep_rename(fileNames, episodeTitles, yesCommit, dryRun)
+    fileNames = get_filenames(workingDir)
+    prep_rename(fileNames, episodeTitles, assumeYes, dryRun)
 
 if __name__ == '__main__':
     main()
