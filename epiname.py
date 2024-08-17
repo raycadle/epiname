@@ -34,49 +34,54 @@ def find_by_ext(directory: str, ext: list[str]) -> list[str]:
 
     return filePaths
 
-def print_new_names(fileNames: list[str], episodeTitles: list[str]) -> None:
-    for file, title in zip(fileNames, episodeTitles):
-        f = Path(file)
-        name, ext = f.stem, f.suffix
-        newName: str = f"{name} - {title}{ext}"
-        print(f"Output: {newName}")
+def print_output(newNames: list[str]) -> None:
+    for name in newNames:
+        print(f"Output: {name}")
 
     return None
 
-def rename_files(fileNames: list[str], episodeTitles: list[str]) -> None:
-    for file, title in zip(fileNames, episodeTitles):
+def rename_files(files: list[str], newNames: list[str]) -> None:
+    for file, newName in zip(files, newNames):
         f = Path(file)
-        name, ext = f.stem, f.suffix
-        newName: str = f"{name} - {title}{ext}"
         f.rename(Path(f.parent, newName))
 
     return None
 
-def prep_rename(fileNames: list[str], episodeTitles: list[str], assumeYes: bool, dryRun: bool) -> None:
+def prep_rename(files: list[str], newNames: list[str], assumeYes: bool, dryRun: bool) -> None:
     # Append episode titles to the files
-    if len(fileNames) == len(episodeTitles):
-        print(f"Renaming {len(fileNames)} files...")
+    if len(files) == len(newNames):
+        print(f"Renaming {len(files)} files...")
         if dryRun:
-            print_new_names(fileNames, episodeTitles)
+            print_output(newNames)
             print(f"Dry run complete!")
             sys.exit(0)
 
         if assumeYes:
-            rename_files(fileNames, episodeTitles)
+            rename_files(files, newNames)
             print(f"All files renamed!")
         else:
-            print_new_names(fileNames, episodeTitles)
+            print_output(newNames)
             confirmed: str = input("Are these changes okay? (y|n): ")
             if confirmed == "n":
                 print(f"Changes cancelled. Exiting...")
             else:
-                rename_files(fileNames, episodeTitles)
+                rename_files(files, newNames)
                 print(f"All files renamed!")
     else:
-        print(f"Error: the number of files ({len(fileNames)}) and titles ({len(episodeTitles)}) do not match!")
+        print(f"Error: the number of files ({len(files)}) and titles ({len(newNames)}) do not match!")
         sys.exit(10)
 
     return None
+
+def prep_names(files: list[str], titles: list[str]) -> list[str]:
+    newNames: list[str] = []
+    for file, title in zip(fileNames, titles):
+        f = Path(file)
+        name, ext = f.stem, f.suffix
+        newName: str = f"{name} - {title}{ext}"
+        newNames.append(newName)
+
+    return newNames
 
 def get_titles(titlesFile: str, editFirst: bool) -> list[str]:
     titles: list[str] = []
@@ -92,7 +97,7 @@ def get_titles(titlesFile: str, editFirst: bool) -> list[str]:
 
     return titles
 
-def get_filenames(workingDir: str) -> list[str]:
+def get_files(workingDir: str) -> list[str]:
     files: list[str] = []
     ext: list[str] = [".mkv", ".mp4"]
     print(f"Searching {workingDir} for media files...")
@@ -122,35 +127,38 @@ def search_show(workingDir: str, showName: str) -> str or None:
 
     return titlesFile if 'titlesFile' in locals() else None
 
-def find_titles_file(workingDir: str) -> str:
+def find_titles_file(workingDir: str) -> str or None:
     ext: list[str] = [".txt"]
     result = find_by_ext(workingDir, ext)
-    titlesFile = str(result[0])
-    if check_file(titlesFile):
+    file = str(result[0])
+    if check_file(file):
+        titlesFile = file
         print(f"Found {titlesFile}! Scanning...")
     else:
-        print(f"Warning: No text files were found in {answer}.")
+        print(f"Warning: No text files were found in {workingDir}.")
 
-    return titlesFile
+    return titlesFile if 'titlesFile' in locals() else None
 
 def prompt_titles(workingDir: str) -> str:
     while True:
         answer = input("Please enter the title file's location or the show's name (leave blank to search current directory; q to quit): ")
         if answer == "":
-            currentDir = Path.cwd()
-            print(f"Searching {currentDir} for text files...")
-            titlesSource = find_titles_file(currentDir)
-            break
+            print(f"Searching {workingDir} for text files...")
+            titlesSource = find_titles_file(workingDir)
+            if titlesSource != None:
+                break
         elif answer == "q":
             sys.exit(0)
         else:
             if check_file(answer):
                 titlesSource = answer
                 print(f"Scanning {answer}...")
-                break
+                if titlesSource != None:
+                    break
             elif check_dir(answer):
                 titlesSource = find_titles_file(workingDir)
-                break
+                if titlesSource != None:
+                    break
             else:
                 print(f"Warning: {answer} is not a file!")
                 titlesSource = search_show(workingDir, answer)
@@ -244,9 +252,10 @@ def main() -> None:
 
         workingDir, titlesFile = get_info(args.dir, args.titles)
 
-    episodeTitles = get_titles(titlesFile, editFirst)
-    fileNames = get_filenames(workingDir)
-    prep_rename(fileNames, episodeTitles, assumeYes, dryRun)
+    files = get_files(workingDir)
+    titles = get_titles(titlesFile, editFirst)
+    newNames = prep_names(files, titles)
+    prep_rename(files, newNames, assumeYes, dryRun)
 
 if __name__ == '__main__':
     main()
