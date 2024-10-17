@@ -224,10 +224,10 @@ def get_info(answerDir: str, answerTitles: str) -> str:
 
 def main() -> None:
     # Parse Arguments
-    parser = argparse.ArgumentParser(description='Add episode titles to the episode files of a show.')
-    parser.add_argument('-e', '--edit', action='store_true', help='edit episode titles before renaming episode files')
-    parser.add_argument('-n', '--nochange', action='store_true', help='perform mock-run and print')
-    parser.add_argument('-y', '--yes', action='store_true', help='yes to confirm changes')
+    parser = argparse.ArgumentParser(description='Update the metadata of video files.')
+    parser.add_argument('-e', '--edit', action='store_true', help='edit titles before renaming files')
+    parser.add_argument('-n', '--nochange', action='store_true', help='make no changes only print')
+    parser.add_argument('-y', '--yes', action='store_true', help='answer yes to all prompts')
     parser.add_argument('-d', '--dir', help='directory containing the media files')
     parser.add_argument('-t', '--titles', help='source of episode titles')
     args = parser.parse_args()
